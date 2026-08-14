@@ -1,0 +1,13 @@
+# Serving
+fastapi>=0.115
+uvicorn[standard]>=0.30
+python-multipart>=0.0.9
+
+# Detection — YOLOv8s, the selected model (see MODEL_SELECTION.md)
+ultralytics>=8.3
+torch>=2.2
+pillow>=10.0
+
+# Recipe corpus + index
+pandas>=2.0
+pyarrow>=15.0
