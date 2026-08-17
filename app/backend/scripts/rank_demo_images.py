@@ -18,8 +18,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from PIL import Image, ImageOps
 
-from larder.config import settings
-from larder.pipeline import Pipeline
+from fridgefest.config import settings
+from fridgefest.pipeline import Pipeline
 
 SUFFIXES = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
 

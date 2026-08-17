@@ -5,7 +5,7 @@ import path from 'node:path'
 
 // The backend serves /api and /photos. Proxying both in dev keeps the browser on
 // a single origin, so no CORS preflight is involved in the upload path.
-const BACKEND = process.env.LARDER_BACKEND || 'http://127.0.0.1:8000'
+const BACKEND = process.env.FRIDGEFEST_BACKEND || 'http://127.0.0.1:8000'
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],

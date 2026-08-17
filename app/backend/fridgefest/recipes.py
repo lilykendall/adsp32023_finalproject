@@ -24,10 +24,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from . import presentation
-from .parsing import parse_ingredients, parse_instructions
+from .parsing import parse_ingredients, parse_instructions, parse_raw_ingredients
 from .taxonomy import Taxonomy
 
-CACHE_VERSION = 3
+CACHE_VERSION = 4
 
 
 @dataclass
@@ -45,6 +45,9 @@ class RecipeRecord:
     description: str
     tags: list[str]
     n_steps: int
+    # As written in the corpus — quantities and units intact, for the recipe detail view.
+    raw_ingredients: list[str]
+    instructions: list[str]
 
 
 @dataclass
@@ -74,9 +77,11 @@ class RecipeIndex:
         self.taxonomy = taxonomy
 
         self.inverted: dict[str, list[int]] = {}
+        self.by_id: dict[str, int] = {}
         for idx, rec in enumerate(records):
             for key in rec.canon_keys:
                 self.inverted.setdefault(key, []).append(idx)
+            self.by_id.setdefault(rec.dish_id, idx)
 
         class_keys = set(taxonomy.entries)
         bound = class_keys & set(self.inverted)
@@ -128,12 +133,18 @@ class RecipeIndex:
                         presentation.minutes_from_display(time_display),
                     ),
                     n_steps=len(instructions),
+                    raw_ingredients=parse_raw_ingredients(raw_text),
+                    instructions=instructions,
                 )
             )
 
         return cls(records, taxonomy)
 
     # ── retrieval ─────────────────────────────────────────────────────────
+
+    def get(self, dish_id: str) -> RecipeRecord | None:
+        idx = self.by_id.get(dish_id)
+        return self.records[idx] if idx is not None else None
 
     def rank(
         self,

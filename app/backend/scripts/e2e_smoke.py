@@ -101,7 +101,7 @@ def wait_for_health(timeout: float = 90.0) -> dict:
 
 
 def post_image(path: Path) -> dict:
-    boundary = "----lardersmoke"
+    boundary = "----fridgefestsmoke"
     body = b"".join([
         f"--{boundary}\r\n".encode(),
         f'Content-Disposition: form-data; name="image"; filename="{path.name}"\r\n'.encode(),
@@ -128,20 +128,20 @@ def main() -> int:
         print(f"No image at {image}")
         return 1
 
-    tmp = Path(tempfile.mkdtemp(prefix="larder-smoke-"))
+    tmp = Path(tempfile.mkdtemp(prefix="fridgefest-smoke-"))
     proc = None
     try:
         artifacts = build_artifacts(tmp)
 
         env = {
             **os.environ,
-            "LARDER_ARTIFACTS": str(artifacts),
-            "LARDER_INDEX_CACHE": str(tmp / "index.pkl"),
-            "LARDER_MIN_MATCHES": "1",  # tiny corpus, tiny queries
+            "FRIDGEFEST_ARTIFACTS": str(artifacts),
+            "FRIDGEFEST_INDEX_CACHE": str(tmp / "index.pkl"),
+            "FRIDGEFEST_MIN_MATCHES": "1",  # tiny corpus, tiny queries
         }
         print(f"Starting server on :{PORT} ...")
         proc = subprocess.Popen(
-            [sys.executable, "-m", "uvicorn", "larder.server:app", "--port", str(PORT)],
+            [sys.executable, "-m", "uvicorn", "fridgefest.server:app", "--port", str(PORT)],
             cwd=str(BACKEND), env=env,
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
         )

@@ -2,7 +2,7 @@
 """Rank ingredients by how well they will demo.
 
 Joins two things that live apart: how reliably the detector finds a class
-(per-class AP from the test run in `yolo_model.ipynb`) and how much of the
+(per-class AP from the test run in `yolo/02d_colab_final_evaluation.ipynb`) and how much of the
 recipe corpus that class can reach. An ingredient only demos well if both are
 true — `garlic` is in 4,169 recipes but is barely detected (AP@0.5 0.19), while
 `tree tomato` is detected perfectly and appears in nothing.
@@ -19,8 +19,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from larder.config import settings
-from larder.pipeline import Pipeline
+from fridgefest.config import settings
+from fridgefest.pipeline import Pipeline
 
 AP_CSV = Path(__file__).parent / "data" / "per_class_ap.csv"
 

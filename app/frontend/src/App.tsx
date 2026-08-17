@@ -2,10 +2,12 @@ import { useState, useRef, useCallback, useEffect, type DragEvent, type ChangeEv
 import {
   analyzeImage,
   fetchHealth,
+  fetchRecipeDetail,
   type AnalysisResult,
   type HealthResult,
   type Ingredient,
   type Recipe,
+  type RecipeDetail,
 } from './api'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -393,6 +395,180 @@ function CopyButton({ items }: { items: GroceryItem[] }) {
   )
 }
 
+// ─── Recipe Detail Modal ──────────────────────────────────────────────────────
+
+function RecipeDetailModal({
+  name,
+  detail,
+  loading,
+  error,
+  onClose,
+}: {
+  name: string
+  detail: RecipeDetail | null
+  loading: boolean
+  error: string | null
+  onClose: () => void
+}) {
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [onClose])
+
+  return (
+    <>
+      <div
+        onClick={onClose}
+        style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(28,25,23,0.45)',
+          backdropFilter: 'blur(2px)',
+          zIndex: 100,
+          animation: 'fadeIn 0.2s ease',
+        }}
+      />
+
+      <div
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 101,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 24,
+          pointerEvents: 'none',
+        }}
+      >
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            pointerEvents: 'auto',
+            width: 'min(640px, 100%)',
+            maxHeight: '85vh',
+            backgroundColor: 'var(--card)',
+            borderRadius: 14,
+            border: '1px solid var(--border)',
+            boxShadow: '0 24px 64px rgba(28,25,23,0.25)',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            animation: 'popIn 0.22s cubic-bezier(0.32,0,0.16,1)',
+          }}
+        >
+          <style>{`
+            @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+            @keyframes popIn { from { opacity: 0; transform: scale(0.97) translateY(6px); } to { opacity: 1; transform: none; } }
+          `}</style>
+
+          {/* Header */}
+          <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexShrink: 0 }}>
+            <div>
+              <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.375rem', fontWeight: 400, color: 'var(--foreground)', lineHeight: 1.3, marginBottom: 6 }}>
+                {name}
+              </h2>
+              {detail && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                  <span className={difficultyColor[detail.difficulty]} style={{ fontSize: '0.7rem', fontWeight: 600, padding: '2px 8px', borderRadius: 10, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                    {detail.difficulty}
+                  </span>
+                  <span style={{ fontSize: '0.8125rem', color: 'var(--muted-foreground)' }}>
+                    {detail.timeEstimated ? '~' : ''}{detail.time}
+                  </span>
+                </div>
+              )}
+            </div>
+            <button
+              onClick={onClose}
+              style={{ width: 32, height: 32, borderRadius: 6, border: '1px solid var(--border)', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted-foreground)', flexShrink: 0 }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Body */}
+          <div style={{ overflowY: 'auto', padding: '20px 24px 28px' }}>
+            {loading && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="skeleton" style={{ height: 16, width: `${70 - i * 6}%`, borderRadius: 4 }} />
+                ))}
+              </div>
+            )}
+
+            {!loading && error && (
+              <Banner tone="error" title="Couldn't load this recipe" body={error} />
+            )}
+
+            {!loading && !error && detail && (
+              <>
+                {detail.image && (
+                  <div style={{ borderRadius: 10, overflow: 'hidden', marginBottom: 18, aspectRatio: '16/9' }}>
+                    <img src={detail.image} alt={detail.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </div>
+                )}
+
+                {detail.description && (
+                  <p style={{ fontSize: '0.9375rem', color: 'var(--muted-foreground)', lineHeight: 1.7, marginBottom: 24 }}>
+                    {detail.description}
+                  </p>
+                )}
+
+                <div style={{ display: 'grid', gridTemplateColumns: detail.instructions.length ? '1fr 1.4fr' : '1fr', gap: 28 }}>
+                  <div>
+                    <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.0625rem', fontWeight: 400, color: 'var(--foreground)', marginBottom: 12 }}>
+                      Ingredients
+                      <span style={{ fontFamily: 'inherit', fontSize: '0.75rem', color: 'var(--muted-foreground)', marginLeft: 8 }}>
+                        ({detail.ingredients.length})
+                      </span>
+                    </h3>
+                    {detail.ingredients.length === 0 ? (
+                      <p style={{ fontSize: '0.875rem', color: 'var(--muted-foreground)' }}>No ingredient list in the corpus for this recipe.</p>
+                    ) : (
+                      <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 9 }}>
+                        {detail.ingredients.map((ing, i) => (
+                          <li key={i} style={{ display: 'flex', gap: 9, fontSize: '0.875rem', color: 'var(--foreground)', lineHeight: 1.5 }}>
+                            <span style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: 'var(--primary)', flexShrink: 0, marginTop: 7 }} />
+                            {ing}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+
+                  {detail.instructions.length > 0 && (
+                    <div>
+                      <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.0625rem', fontWeight: 400, color: 'var(--foreground)', marginBottom: 12 }}>
+                        Directions
+                      </h3>
+                      <ol style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 14 }}>
+                        {detail.instructions.map((step, i) => (
+                          <li key={i} style={{ display: 'flex', gap: 12, fontSize: '0.875rem', color: 'var(--foreground)', lineHeight: 1.6 }}>
+                            <span style={{ flexShrink: 0, width: 22, height: 22, borderRadius: '50%', backgroundColor: 'var(--muted)', color: 'var(--muted-foreground)', fontSize: '0.75rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              {i + 1}
+                            </span>
+                            <span style={{ paddingTop: 2 }}>{step}</span>
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
+
 // ─── Components ───────────────────────────────────────────────────────────────
 
 function UploadZone({
@@ -525,56 +701,18 @@ function IngredientTag({ ingredient, index }: { ingredient: Ingredient; index: n
   )
 }
 
-/** Deterministic stand-in for recipes whose photo isn't in the local photo set. */
-function RecipePlaceholder({ name }: { name: string }) {
-  // Hash the name so a given dish always renders the same plate.
-  let hash = 0
-  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) | 0
-  const hue = Math.abs(hash) % 360
-  const initials = name
-    .split(/\s+/)
-    .filter((w) => /[a-z]/i.test(w))
-    .slice(0, 2)
-    .map((w) => w[0].toUpperCase())
-    .join('')
-
-  return (
-    <div
-      aria-hidden
-      style={{
-        width: '100%',
-        height: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: `linear-gradient(135deg, hsl(${hue} 32% 88%), hsl(${(hue + 40) % 360} 28% 78%))`,
-      }}
-    >
-      <span
-        style={{
-          fontFamily: 'var(--font-serif)',
-          fontSize: '2.25rem',
-          fontWeight: 300,
-          color: `hsl(${hue} 40% 32%)`,
-          letterSpacing: '0.04em',
-        }}
-      >
-        {initials || '·'}
-      </span>
-    </div>
-  )
-}
-
 function RecipeCard({
   recipe,
   index,
   onAddToGrocery,
   addedToGrocery,
+  onOpenDetail,
 }: {
   recipe: Recipe
   index: number
   onAddToGrocery: (recipe: Recipe) => void
   addedToGrocery: boolean
+  onOpenDetail: (recipe: Recipe) => void
 }) {
   const [hovered, setHovered] = useState(false)
 
@@ -583,6 +721,10 @@ function RecipeCard({
       className="animate-fade-slide-up"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      onClick={() => onOpenDetail(recipe)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpenDetail(recipe) } }}
       style={{
         animationDelay: `${index * 80}ms`,
         opacity: 0,
@@ -590,6 +732,7 @@ function RecipeCard({
         borderRadius: 12,
         overflow: 'hidden',
         border: '1px solid var(--border)',
+        cursor: 'pointer',
         transition: 'transform 0.25s ease, box-shadow 0.25s ease',
         transform: hovered ? 'translateY(-3px)' : 'none',
         boxShadow: hovered ? '0 12px 32px rgba(28,25,23,0.10)' : '0 1px 3px rgba(28,25,23,0.06)',
@@ -597,36 +740,21 @@ function RecipeCard({
         flexDirection: 'column',
       }}
     >
-      {/* Image — the corpus ships photo paths but the photo set is optional, so
-          a recipe with no local image gets a generated monogram plate instead. */}
-      <div style={{ position: 'relative', height: 180, backgroundColor: 'var(--muted)', overflow: 'hidden', flexShrink: 0 }}>
-        {recipe.image ? (
-          <img src={recipe.image} alt={recipe.name} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.4s ease', transform: hovered ? 'scale(1.04)' : 'scale(1)' }} />
-        ) : (
-          <RecipePlaceholder name={recipe.name} />
-        )}
-        <div style={{ position: 'absolute', top: 12, right: 12, backgroundColor: 'var(--primary)', color: 'var(--primary-foreground)', padding: '3px 10px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 500 }}>
-          {recipe.matchedIngredients.length} matches
-        </div>
-        <div
-          title={`Jaccard similarity ${recipe.score.toFixed(3)} · uses ${(recipe.coverage * 100).toFixed(0)}% of what you have`}
-          style={{ position: 'absolute', bottom: 12, left: 12, backgroundColor: 'rgba(28,25,23,0.72)', color: '#F7F3EE', padding: '3px 9px', borderRadius: 20, fontSize: '0.6875rem', fontWeight: 600, letterSpacing: '0.03em', backdropFilter: 'blur(3px)' }}
-        >
-          {recipe.score.toFixed(2)} match
-        </div>
-      </div>
-
       {/* Body */}
       <div style={{ padding: '20px 20px 0', flex: 1, display: 'flex', flexDirection: 'column' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
           <span className={difficultyColor[recipe.difficulty]} style={{ fontSize: '0.7rem', fontWeight: 600, padding: '2px 8px', borderRadius: 10, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
             {recipe.difficulty}
           </span>
-          {recipe.tags.slice(0, 2).map((t) => (
-            <span key={t} style={{ fontSize: '0.7rem', fontWeight: 500, padding: '2px 8px', borderRadius: 10, color: 'var(--muted-foreground)', backgroundColor: 'var(--muted)' }}>
-              {t}
-            </span>
-          ))}
+          <span style={{ fontSize: '0.7rem', fontWeight: 500, padding: '2px 8px', borderRadius: 10, backgroundColor: 'var(--primary)', color: 'var(--primary-foreground)' }}>
+            {recipe.matchedIngredients.length} matches
+          </span>
+          <span
+            title={`Jaccard similarity ${recipe.score.toFixed(3)} · uses ${(recipe.coverage * 100).toFixed(0)}% of what you have`}
+            style={{ fontSize: '0.6875rem', fontWeight: 600, letterSpacing: '0.03em', padding: '2px 8px', borderRadius: 10, color: 'var(--muted-foreground)', backgroundColor: 'var(--muted)' }}
+          >
+            {recipe.score.toFixed(2)} match
+          </span>
         </div>
 
         <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.0625rem', fontWeight: 400, color: 'var(--foreground)', marginBottom: 8, lineHeight: 1.35 }}>
@@ -841,6 +969,10 @@ export default function App() {
   const [result, setResult] = useState<AnalysisResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [health, setHealth] = useState<HealthResult | null>(null)
+  const [detailRecipe, setDetailRecipe] = useState<Recipe | null>(null)
+  const [detail, setDetail] = useState<RecipeDetail | null>(null)
+  const [detailLoading, setDetailLoading] = useState(false)
+  const [detailError, setDetailError] = useState<string | null>(null)
 
   const objectUrlRef = useRef<string | null>(null)
 
@@ -941,6 +1073,35 @@ export default function App() {
     setAddedRecipes(new Set())
   }, [])
 
+  const handleOpenDetail = useCallback((recipe: Recipe) => {
+    setDetailRecipe(recipe)
+  }, [])
+
+  const handleCloseDetail = useCallback(() => {
+    setDetailRecipe(null)
+  }, [])
+
+  // Fetch full recipe (ingredients with amounts + directions) on open.
+  useEffect(() => {
+    if (!detailRecipe) {
+      setDetail(null)
+      setDetailError(null)
+      return
+    }
+    const controller = new AbortController()
+    setDetail(null)
+    setDetailError(null)
+    setDetailLoading(true)
+    fetchRecipeDetail(detailRecipe.id, controller.signal)
+      .then(setDetail)
+      .catch((err) => {
+        if (err instanceof DOMException && err.name === 'AbortError') return
+        setDetailError(err instanceof Error ? err.message : 'Failed to load recipe.')
+      })
+      .finally(() => setDetailLoading(false))
+    return () => controller.abort()
+  }, [detailRecipe])
+
   const handleReset = useCallback(() => {
     setState('idle')
     if (objectUrlRef.current) {
@@ -966,10 +1127,7 @@ export default function App() {
       <header style={{ borderBottom: '1px solid var(--border)', backgroundColor: 'var(--card)', padding: '0 24px', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 50 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
           <span style={{ fontFamily: 'var(--font-serif)', fontSize: '1.3125rem', fontWeight: 400, color: 'var(--foreground)', letterSpacing: '-0.01em' }}>
-            Larder
-          </span>
-          <span style={{ fontSize: '0.6875rem', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--accent)' }}>
-            AI
+            FridgeFest
           </span>
         </div>
 
@@ -1151,6 +1309,7 @@ export default function App() {
                       index={i}
                       onAddToGrocery={handleAddToGrocery}
                       addedToGrocery={addedRecipes.has(recipe.id)}
+                      onOpenDetail={handleOpenDetail}
                     />
                   ))}
                 </div>
@@ -1168,6 +1327,17 @@ export default function App() {
           onRemove={handleRemove}
           onClear={handleClear}
           onClose={() => setGroceryOpen(false)}
+        />
+      )}
+
+      {/* Recipe detail modal */}
+      {detailRecipe && (
+        <RecipeDetailModal
+          name={detailRecipe.name}
+          detail={detail}
+          loading={detailLoading}
+          error={detailError}
+          onClose={handleCloseDetail}
         />
       )}
     </div>

@@ -48,8 +48,8 @@ def clean_ingredient(raw: str) -> str:
     return name if name else raw.lower().strip()
 
 
-def parse_ingredients(recipe_text: str | None) -> list[str]:
-    """Extract cleaned ingredient names from a recipe's raw text blob."""
+def _extract_ingredient_lines(recipe_text: str | None) -> list[str]:
+    """Raw ingredient lines as written in the corpus, before any cleaning."""
     if not recipe_text or not isinstance(recipe_text, str):
         return []
 
@@ -74,8 +74,18 @@ def parse_ingredients(recipe_text: str | None) -> list[str]:
     if not isinstance(raw_items, (list, tuple)):
         return []
 
-    cleaned = [clean_ingredient(str(i)) for i in raw_items if str(i).strip()]
+    return [str(i).strip() for i in raw_items if str(i).strip()]
+
+
+def parse_ingredients(recipe_text: str | None) -> list[str]:
+    """Extract cleaned ingredient names from a recipe's raw text blob."""
+    cleaned = [clean_ingredient(i) for i in _extract_ingredient_lines(recipe_text)]
     return [c for c in cleaned if c not in _STOPWORDS]
+
+
+def parse_raw_ingredients(recipe_text: str | None) -> list[str]:
+    """Ingredient lines as written — quantities and units intact, for display."""
+    return _extract_ingredient_lines(recipe_text)
 
 
 def parse_instructions(recipe_text: str | None) -> list[str]:

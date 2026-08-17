@@ -243,11 +243,32 @@ class Pipeline:
             "derived": ["time", "difficulty", "tags", "description"],
         }
 
+    def recipe_detail(self, dish_id: str) -> dict[str, Any] | None:
+        if not self.index:
+            raise RuntimeError(self.status.index_error or "Recipe index not loaded")
+        rec = self.index.get(dish_id)
+        if rec is None:
+            return None
+        return {
+            "id": rec.dish_id,
+            "name": rec.dish_name,
+            "time": rec.time_display,
+            "timeEstimated": rec.time_estimated,
+            "difficulty": rec.difficulty,
+            "description": rec.description,
+            "ingredients": rec.raw_ingredients,
+            "instructions": rec.instructions,
+            "image": self._photo_url(rec.dish_id, rec.photo_path),
+            "tags": rec.tags,
+            "totalIngredients": len(rec.ingredients),
+            "derived": ["time", "difficulty", "tags", "description"],
+        }
+
     def _photo_url(self, dish_id: str, photo_path: str | None) -> str | None:
         if not self.status.photos_available or not photo_path:
             return None
         # photo_path in the corpus looks like "photos/KG-000001.jpg"; the backend
-        # serves whatever sits under LARDER_PHOTOS at that basename.
+        # serves whatever sits under FRIDGEFEST_PHOTOS at that basename.
         name = Path(photo_path).name
         if not (self.settings.photos_dir / name).exists():
             return None

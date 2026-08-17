@@ -60,23 +60,29 @@ class Settings:
 
     @classmethod
     def from_env(cls) -> "Settings":
-        artifacts = _env_path("LARDER_ARTIFACTS", DEFAULT_ARTIFACTS)
+        artifacts = _env_path("FRIDGEFEST_ARTIFACTS", DEFAULT_ARTIFACTS)
         return cls(
             artifacts_dir=artifacts,
-            weights_path=_env_path("LARDER_WEIGHTS", artifacts / "best.pt"),
-            # 0.25 is the threshold the model was validated at in yolo_model.ipynb.
-            conf_threshold=_env_float("LARDER_CONF", 0.25),
-            iou_threshold=_env_float("LARDER_IOU", 0.45),
-            image_size=_env_int("LARDER_IMGSZ", 640),
-            tiling=_env_bool("LARDER_TILING", True),
-            high_confidence=_env_float("LARDER_HIGH_CONF", 0.50),
-            recipes_path=_env_path("LARDER_RECIPES", artifacts / "recipes.parquet"),
-            photos_dir=_env_path("LARDER_PHOTOS", artifacts / "photos"),
+            weights_path=_env_path("FRIDGEFEST_WEIGHTS", artifacts / "best.pt"),
+            # 0.25 is the threshold the model was validated at (yolo/02e_colab_highres_retrain.ipynb,
+            # unchanged from the yolo/02d_colab_final_evaluation.ipynb baseline) but that operating point trades
+            # a lot of recall for precision -- R=0.285 at conf=0.25 on the test set. 0.15
+            # recovers real detections that otherwise sit just under the cutoff, at the
+            # cost of a bit more low-confidence noise (the UI already labels anything
+            # under FRIDGEFEST_HIGH_CONF as "medium" rather than presenting it as certain).
+            conf_threshold=_env_float("FRIDGEFEST_CONF", 0.15),
+            iou_threshold=_env_float("FRIDGEFEST_IOU", 0.45),
+            # 960 to match the highres_yolov8s_960 checkpoint's training resolution.
+            image_size=_env_int("FRIDGEFEST_IMGSZ", 960),
+            tiling=_env_bool("FRIDGEFEST_TILING", True),
+            high_confidence=_env_float("FRIDGEFEST_HIGH_CONF", 0.50),
+            recipes_path=_env_path("FRIDGEFEST_RECIPES", artifacts / "recipes.parquet"),
+            photos_dir=_env_path("FRIDGEFEST_PHOTOS", artifacts / "photos"),
             index_cache_path=_env_path(
-                "LARDER_INDEX_CACHE", artifacts / "recipe_index.cache.pkl"
+                "FRIDGEFEST_INDEX_CACHE", artifacts / "recipe_index.cache.pkl"
             ),
-            top_k=_env_int("LARDER_TOP_K", 12),
-            min_matches=_env_int("LARDER_MIN_MATCHES", 2),
+            top_k=_env_int("FRIDGEFEST_TOP_K", 12),
+            min_matches=_env_int("FRIDGEFEST_MIN_MATCHES", 2),
         )
 
     def resolve_recipes_path(self) -> Path | None:

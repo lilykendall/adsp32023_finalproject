@@ -1,4 +1,4 @@
-// Client for the Larder backend. Shapes mirror larder/pipeline.py exactly.
+// Client for the FridgeFest backend. Shapes mirror fridgefest/pipeline.py exactly.
 
 export type IngredientCategory =
   | 'protein'
@@ -63,6 +63,20 @@ export interface AnalysisResult {
   meta: AnalysisMeta
 }
 
+export interface RecipeDetail {
+  id: string
+  name: string
+  time: string
+  timeEstimated: boolean
+  difficulty: 'Easy' | 'Medium' | 'Challenging'
+  description: string
+  ingredients: string[]
+  instructions: string[]
+  image: string | null
+  tags: string[]
+  totalIngredients: number
+}
+
 export interface HealthResult {
   ready: boolean
   detector: { ready: boolean; weights: string | null; classes: number; error: string | null }
@@ -108,6 +122,12 @@ export async function analyzeImage(file: File, signal?: AbortSignal): Promise<An
 
 export async function fetchHealth(signal?: AbortSignal): Promise<HealthResult> {
   const response = await fetch('/api/health', { signal })
+  if (!response.ok) throw new Error(await errorMessage(response))
+  return response.json()
+}
+
+export async function fetchRecipeDetail(id: string, signal?: AbortSignal): Promise<RecipeDetail> {
+  const response = await fetch(`/api/recipes/${encodeURIComponent(id)}`, { signal })
   if (!response.ok) throw new Error(await errorMessage(response))
   return response.json()
 }

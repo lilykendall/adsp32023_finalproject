@@ -1,20 +1,24 @@
 """YOLOv8s ingredient detector.
 
-Model selection (see MODEL_SELECTION.md): the YOLOv8s baseline is the deployed
-detector because it beat every Faster R-CNN arm on the same held-out test split
-by roughly 3x on mAP@[0.5:0.95] — 0.221 vs 0.0785 for the best Faster R-CNN run.
+Model selection (see docs/MODEL_SELECTION.md): YOLOv8s is the deployed detector
+because it beat every Faster R-CNN arm on the same held-out test split by
+roughly 3x on mAP@[0.5:0.95] — 0.221 vs 0.0785 for the best Faster R-CNN run.
+The deployed checkpoint is `highres_yolov8s_960` (see yolo/02e_colab_highres_retrain.ipynb),
+a 960px retrain warm-started from that baseline to target its two measured
+weaknesses: small objects and the class tail.
 
 Detections are aggregated per class rather than per box: the UI asks "what
 ingredients are in this fridge", so six tomatoes are one ingredient with a count,
 not six ingredients.
 
-Tiled inference: the model's measured weak point is small objects (test
-recall@0.5 of 0.405 small vs 0.736 large, with 24,104 of 30,832 test boxes
-small). A wide fridge shot downscaled to 640px starves exactly those boxes of
-pixels. So for images meaningfully larger than the model resolution, detect()
-runs the full frame plus overlapping model-resolution tiles in one batch, maps
-tile boxes back to frame coordinates, and de-duplicates. The full-frame pass
-keeps objects that span tile seams; the tiles recover the small ones.
+Tiled inference: the baseline model's measured weak point was small objects
+(test recall@0.5 of 0.405 small vs 0.736 large, with 24,104 of 30,832 test
+boxes small) — part of why the deployed checkpoint was retrained at 960px
+instead of 640px. Tiling still helps beyond that: for images meaningfully
+larger than the model resolution, detect() runs the full frame plus
+overlapping model-resolution tiles in one batch, maps tile boxes back to frame
+coordinates, and de-duplicates. The full-frame pass keeps objects that span
+tile seams; the tiles recover the small ones.
 """
 
 from __future__ import annotations

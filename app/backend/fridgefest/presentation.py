@@ -29,25 +29,6 @@ _VEGETARIAN_EXCLUSIONS = {
     "crab", "bacon", "sausage", "ham", "turkey", "duck", "anchovy", "gelatin",
 }
 
-_TAG_KEYWORDS = {
-    "Breakfast": ["pancake", "waffle", "omelet", "omelette", "frittata", "granola",
-                  "oatmeal", "porridge", "breakfast", "brunch", "scrambled", "muffin"],
-    "Dessert": ["cake", "cookie", "brownie", "pie", "tart", "ice cream", "pudding",
-                "mousse", "sorbet", "custard", "trifle", "cheesecake", "dessert",
-                "candy", "fudge", "cobbler", "crumble"],
-    "Salad": ["salad", "slaw"],
-    "Soup": ["soup", "stew", "chowder", "broth", "bisque", "chili"],
-    "Sauce": ["sauce", "dressing", "vinaigrette", "marinade", "salsa", "pesto",
-              "chutney", "relish", "dip"],
-    "Bread & Baking": ["bread", "biscuit", "scone", "roll", "loaf", "focaccia", "dough"],
-    "Drink": ["cocktail", "smoothie", "juice", "punch", "margarita", "martini",
-              "lemonade", "latte", "tea", "soda"],
-    "Grilled": ["grill", "grilled", "barbecue", "bbq", "charred"],
-    "Roasted": ["roast", "roasted"],
-    "Side Dish": ["side"],
-}
-
-
 def cook_time(instructions: list[str], n_ingredients: int) -> tuple[str, bool]:
     """(display string, estimated?) — estimated=True when nothing was stated."""
     total = 0
@@ -106,12 +87,7 @@ def description(dish_name: str, instructions: list[str], ingredients: list[str])
 
 def tags(dish_name: str, ingredients: list[str], instructions: list[str],
          time_minutes: int | None = None) -> list[str]:
-    haystack = " ".join([dish_name.lower(), " ".join(ingredients).lower()])
     found: list[str] = []
-
-    for tag, keywords in _TAG_KEYWORDS.items():
-        if any(kw in haystack for kw in keywords):
-            found.append(tag)
 
     joined_ingredients = " ".join(ingredients).lower()
     if not any(x in joined_ingredients for x in _VEGAN_EXCLUSIONS):

@@ -17,10 +17,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import pandas as pd
 
-from larder import presentation
-from larder.parsing import parse_ingredients, parse_instructions
-from larder.recipes import RecipeIndex
-from larder.taxonomy import Taxonomy
+from fridgefest import presentation
+from fridgefest.parsing import parse_ingredients, parse_instructions
+from fridgefest.recipes import RecipeIndex
+from fridgefest.taxonomy import Taxonomy
 
 FAILURES: list[str] = []
 

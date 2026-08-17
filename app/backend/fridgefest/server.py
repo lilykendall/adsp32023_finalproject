@@ -17,7 +17,7 @@ from .pipeline import Pipeline
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s %(levelname)-7s %(name)s: %(message)s"
 )
-log = logging.getLogger("larder")
+log = logging.getLogger("fridgefest")
 
 MAX_UPLOAD_BYTES = 20 * 1024 * 1024  # matches the 20 MB the upload zone advertises
 
@@ -37,7 +37,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Larder AI", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="FridgeFest", version="1.0.0", lifespan=lifespan)
 
 # Vite dev server proxies /api, so this only matters if the frontend is served
 # from a different origin.
@@ -77,6 +77,19 @@ def reload_artifacts():
     """Re-read weights and corpus without restarting the process."""
     pipeline.load()
     return health()
+
+
+@app.get("/api/recipes/{dish_id}")
+def recipe_detail(dish_id: str):
+    if not pipeline.status.index_ready:
+        raise HTTPException(
+            status_code=503,
+            detail={"message": "Recipe index not loaded", "recipes": pipeline.status.index_error},
+        )
+    detail = pipeline.recipe_detail(dish_id)
+    if detail is None:
+        raise HTTPException(status_code=404, detail={"message": f"No recipe with id {dish_id!r}"})
+    return detail
 
 
 @app.post("/api/analyze")
