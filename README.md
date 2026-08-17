@@ -1,21 +1,34 @@
-# Larder AI
+# FridgeFest
 
 Upload a fridge or pantry photo → YOLOv8s detects the ingredients → Jaccard set
 similarity ranks what you can cook from a 13,502-recipe corpus.
 
-The Figma mockup (`Ingredient-based recipe suggestions.make`) is now a working
-app: `frontend/` is that design with the mock arrays removed, `backend/` serves
-the two selected models. See [MODEL_SELECTION.md](MODEL_SELECTION.md) for why
-those two.
+## Repository layout
+
+`app/` is the deliverable — the sections below document it. Everything else is
+the modeling work that produced it:
+
+```
+app/                the FridgeFest app itself (documented below)
+data_eda/           dataset merge/cleaning notebooks shared by every model
+yolo/               YOLOv8 detector: setup → baseline train → eval → high-res retrain
+fastercnn/          Faster R-CNN, the competing detector (see docs/MODEL_SELECTION.md)
+recipe_embedding/   ingredient parsing + retrieval method comparison (Jaccard vs. embeddings)
+docs/               write-up, model selection rationale, and slides
+```
+
+The Figma mockup (`app/Ingredient-based recipe suggestions.make`) is now a
+working app: `app/frontend/` is that design with the mock arrays removed,
+`app/backend/` serves the two selected models. See
+[docs/MODEL_SELECTION.md](docs/MODEL_SELECTION.md) for why those two.
 
 ```
 app/
-├── MODEL_SELECTION.md      which model won each comparison, with the numbers
 ├── backend/
-│   ├── larder/
+│   ├── fridgefest/
 │   │   ├── detector.py     YOLOv8s wrapper, aggregates boxes per class
 │   │   ├── taxonomy.py     detector classes  <->  recipe ingredient vocabulary
-│   │   ├── parsing.py      ingredient parser, ported from Recipe_Modeling.ipynb
+│   │   ├── parsing.py      ingredient parser, ported from recipe_embedding/Recipe_Modeling.ipynb
 │   │   ├── recipes.py      inverted index + Jaccard ranking
 │   │   ├── presentation.py derived card fields (time, difficulty, tags, blurb)
 │   │   ├── pipeline.py     image -> ingredients -> recipes
@@ -82,7 +95,7 @@ Optional extras:
 # backend  (first run builds the recipe index, ~10s; cached after that)
 cd app/backend
 python3 -m venv .venv && ./.venv/bin/pip install -r requirements.txt
-./.venv/bin/python -m uvicorn larder.server:app --port 8000
+./.venv/bin/python -m uvicorn fridgefest.server:app --port 8000
 
 # frontend, in a second shell
 cd app/frontend
@@ -175,30 +188,30 @@ The corpus has four columns: `dish_id`, `dish_name`, `recipe`, `photo_path`.
 
 ## Configuration
 
-Every setting is an environment variable; defaults in `larder/config.py`.
+Every setting is an environment variable; defaults in `fridgefest/config.py`.
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `LARDER_ARTIFACTS` | `backend/artifacts` | where weights and corpus live |
-| `LARDER_WEIGHTS` | `<artifacts>/best.pt` | detector checkpoint |
-| `LARDER_RECIPES` | `<artifacts>/recipes.parquet` | recipe corpus |
-| `LARDER_PHOTOS` | `<artifacts>/photos` | optional dish photos |
-| `LARDER_CONF` | `0.25` | detection threshold (the validated one) |
-| `LARDER_IOU` | `0.45` | NMS IoU |
-| `LARDER_IMGSZ` | `640` | inference size |
-| `LARDER_TILING` | `1` | tiled inference for images > 1.25× `LARDER_IMGSZ` (recovers small objects in wide shots; set `0` to disable) |
-| `LARDER_HIGH_CONF` | `0.50` | "high" vs "medium" confidence band |
-| `LARDER_TOP_K` | `12` | recipes returned |
-| `LARDER_MIN_MATCHES` | `2` | min matched ingredients per recipe |
+| `FRIDGEFEST_ARTIFACTS` | `backend/artifacts` | where weights and corpus live |
+| `FRIDGEFEST_WEIGHTS` | `<artifacts>/best.pt` | detector checkpoint |
+| `FRIDGEFEST_RECIPES` | `<artifacts>/recipes.parquet` | recipe corpus |
+| `FRIDGEFEST_PHOTOS` | `<artifacts>/photos` | optional dish photos |
+| `FRIDGEFEST_CONF` | `0.25` | detection threshold (the validated one) |
+| `FRIDGEFEST_IOU` | `0.45` | NMS IoU |
+| `FRIDGEFEST_IMGSZ` | `640` | inference size |
+| `FRIDGEFEST_TILING` | `1` | tiled inference for images > 1.25× `FRIDGEFEST_IMGSZ` (recovers small objects in wide shots; set `0` to disable) |
+| `FRIDGEFEST_HIGH_CONF` | `0.50` | "high" vs "medium" confidence band |
+| `FRIDGEFEST_TOP_K` | `12` | recipes returned |
+| `FRIDGEFEST_MIN_MATCHES` | `2` | min matched ingredients per recipe |
 
-`LARDER_MIN_MATCHES` is a product filter, not part of the score. Without it a
+`FRIDGEFEST_MIN_MATCHES` is a product filter, not part of the score. Without it a
 two-ingredient vinaigrette that happens to use one detected item outranks a
 dinner using six — correct Jaccard, useless advice. When it would eliminate
 every candidate (a one-ingredient query), the ranker falls back to 1.
 
 ## Extending the taxonomy
 
-`larder/data/ingredient_taxonomy.json` maps detector classes to the words
+`fridgefest/data/ingredient_taxonomy.json` maps detector classes to the words
 recipes actually use. Several of the 148 classes are romanised Nepali
 (`palungo`, `rayo ko saag`, `gundruk`) or misspelled in the dataset
 (`cornflakec`, `cantaloup`, `wallnut`), and no English recipe will ever spell
